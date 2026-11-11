@@ -151,7 +151,7 @@ final class ToolbarView: NSView {
         x += 38
 
         let saveRect = CGRect(x: x, y: 5, width: 44, height: h - 10)
-        drawPillButton(ctx: ctx, rect: saveRect, title: "保存", isSelected: false, tint: nil)
+        drawPillButton(ctx: ctx, rect: saveRect, title: "Save", isSelected: false, tint: nil)
         hitTargets.append(HitTarget(rect: saveRect) { [weak self] in self?.onSave?() })
         x += 48
 

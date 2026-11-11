@@ -8,9 +8,9 @@ enum AnnotationTool: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .rectangle: return "方形"
-        case .ellipse: return "圆形"
-        case .arrow: return "箭头"
+        case .rectangle: return "Rect"
+        case .ellipse: return "Ellipse"
+        case .arrow: return "Arrow"
         }
     }
 

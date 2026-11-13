@@ -26,6 +26,9 @@ jobs:
             exit 1
           fi
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Stamp version into source
         run: swift scripts/sync-version.swift --source-only "${{ inputs.version }}" Resources/Info.plist
 
@@ -37,7 +40,7 @@ jobs:
           swift build -c release
           swift test --disable-xctest
 
-      - name: Package app
+      - name: Package dmg
         run: make dist
 
       - name: Create tag & GitHub Release
@@ -45,12 +48,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ inputs.version }}"
-          ZIP="build/QSnip-${{ inputs.version }}-macos.zip"
+          DMG="build/QSnip-${{ inputs.version }}-macos.dmg"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "chore: release $TAG" || true
           git tag -a "$TAG" -m "QSnip $TAG"
           git push origin HEAD:main --follow-tags
-          gh release create "$TAG" "$ZIP" \
+          gh release create "$TAG" "$DMG" \
             --title "QSnip $TAG" \
-            --notes "QSnip $TAG — macOS screenshot & annotation tool. Unzip and move \`QSnip.app\` to /Applications."
+            --notes "QSnip $TAG — macOS screenshot & annotation tool. Open the dmg and drag \`QSnip.app\` to \`Applications\`."

@@ -2,9 +2,9 @@ APP_NAME := QSnip
 BIN_NAME := qsnip
 APP_BUNDLE := build/$(APP_NAME).app
 VERSION := $(shell sed -n 's/.*static let current = "\(.*\)".*/\1/p' Sources/Version.swift)
-ZIP := build/$(APP_NAME)-$(VERSION)-macos.zip
+DMG := build/$(APP_NAME)-$(VERSION)-macos.dmg
 
-.PHONY: all build release test icon app dist run clean
+.PHONY: all build release test icon app dist dmg run clean
 
 all: build
 
@@ -37,10 +37,36 @@ app: release Resources/AppIcon.icns
 	@codesign --force --deep --sign - "$(APP_BUNDLE)" >/dev/null 2>&1 || true
 	@echo "Built $(APP_BUNDLE) (v$(VERSION))"
 
-dist: app
-	@rm -f "$(ZIP)"
-	@ditto -c -k --keepParent "$(APP_BUNDLE)" "$(ZIP)"
-	@echo "Built $(ZIP)"
+# Standard macOS dmg installer: app + Applications symlink, custom volume icon
+dmg: app
+	@rm -f "$(DMG)"
+	@if command -v create-dmg >/dev/null 2>&1; then \
+		create-dmg \
+			--volname "$(APP_NAME) $(VERSION)" \
+			--volicon "$(APP_BUNDLE)/Contents/Resources/AppIcon.icns" \
+			--window-pos 200 120 \
+			--window-size 640 400 \
+			--icon-size 96 \
+			--icon "$(APP_NAME).app" 160 185 \
+			--app-drop-link 480 185 \
+			--hide-extension "$(APP_NAME).app" \
+			"$(DMG)" \
+			"$(APP_BUNDLE)" \
+			2>&1 | grep -v "running on OS X" || true; \
+	else \
+		echo "create-dmg not found; using hdiutil fallback (no drag-link styling)"; \
+		STAGE=$$(mktemp -d); \
+		cp -R "$(APP_BUNDLE)" "$$STAGE/"; \
+		ln -s /Applications "$$STAGE/Applications"; \
+		hdiutil create -volname "$(APP_NAME) $(VERSION)" \
+			-srcfolder "$$STAGE" \
+			-ov -format UDZO \
+			"$(DMG)"; \
+		rm -rf "$$STAGE"; \
+	fi
+	@echo "Built $(DMG)"
+
+dist: dmg
 
 clean:
 	swift package clean

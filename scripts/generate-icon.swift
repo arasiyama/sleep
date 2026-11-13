@@ -5,71 +5,6 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-func createContinuousSquirclePath(in rect: CGRect, radius: CGFloat) -> CGPath {
-    // Use NSBezierPath / CGPath rounded rect tuned to Apple macOS icon proportions
-    return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
-}
-
-func drawSnipArrow(
-    in ctx: CGContext,
-    start: CGPoint,
-    end: CGPoint,
-    headLength: CGFloat,
-    headWidth: CGFloat,
-    neckWidth: CGFloat,
-    tailWidth: CGFloat,
-    gradientColors: [CGColor]
-) {
-    let dx = end.x - start.x
-    let dy = end.y - start.y
-    let angle = atan2(dy, dx)
-    let cosA = cos(angle)
-    let sinA = sin(angle)
-    let perpX = -sinA
-    let perpY = cosA
-
-    let neckCenter = CGPoint(x: end.x - cosA * headLength * 0.76, y: end.y - sinA * headLength * 0.76)
-    let barbBase = CGPoint(x: end.x - cosA * headLength, y: end.y - sinA * headLength)
-
-    let tailLeft = CGPoint(x: start.x + perpX * tailWidth * 0.5, y: start.y + perpY * tailWidth * 0.5)
-    let tailRight = CGPoint(x: start.x - perpX * tailWidth * 0.5, y: start.y - perpY * tailWidth * 0.5)
-    let neckLeft = CGPoint(x: neckCenter.x + perpX * neckWidth * 0.5, y: neckCenter.y + perpY * neckWidth * 0.5)
-    let neckRight = CGPoint(x: neckCenter.x - perpX * neckWidth * 0.5, y: neckCenter.y - perpY * neckWidth * 0.5)
-    let barbLeft = CGPoint(x: barbBase.x + perpX * headWidth * 0.5, y: barbBase.y + perpY * headWidth * 0.5)
-    let barbRight = CGPoint(x: barbBase.x - perpX * headWidth * 0.5, y: barbBase.y - perpY * headWidth * 0.5)
-    let tailCap = CGPoint(x: start.x - cosA * tailWidth * 0.5, y: start.y - sinA * tailWidth * 0.5)
-
-    let path = CGMutablePath()
-    path.move(to: end)
-    path.addLine(to: barbLeft)
-    path.addLine(to: neckLeft)
-    path.addLine(to: tailLeft)
-    path.addQuadCurve(to: tailRight, control: tailCap)
-    path.addLine(to: neckRight)
-    path.addLine(to: barbRight)
-    path.closeSubpath()
-
-    ctx.saveGState()
-    ctx.setShadow(
-        offset: CGSize(width: 0, height: -14),
-        blur: 26,
-        color: NSColor(srgbRed: 0.95, green: 0.28, blue: 0.22, alpha: 0.32).cgColor
-    )
-    ctx.setFillColor(gradientColors[0])
-    ctx.addPath(path)
-    ctx.fillPath()
-    ctx.restoreGState()
-
-    ctx.saveGState()
-    ctx.addPath(path)
-    ctx.clip()
-    let cs = CGColorSpace(name: CGColorSpace.sRGB)!
-    if let grad = CGGradient(colorsSpace: cs, colors: gradientColors as CFArray, locations: [0.0, 1.0]) {
-        ctx.drawLinearGradient(grad, start: start, end: end, options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-    }
-    ctx.restoreGState()
-}
-
 func renderMasterIcon(size: Int = 1024) -> CGImage {
     let cs = CGColorSpace(name: CGColorSpace.sRGB)!
     let ctx = CGContext(
@@ -87,199 +22,199 @@ func renderMasterIcon(size: Int = 1024) -> CGImage {
     let scale = s / 1024.0
     ctx.scaleBy(x: scale, y: scale)
 
-    // Apple HIG macOS squircle: 824x824 centered inside 1024x1024
+    // macOS squircle body (824x824 centered in 1024x1024)
     let bodyRect = CGRect(x: 100, y: 100, width: 824, height: 824)
-    let bodyPath = createContinuousSquirclePath(in: bodyRect, radius: 185)
+    let bodyPath = CGPath(roundedRect: bodyRect, cornerWidth: 185, cornerHeight: 185, transform: nil)
 
-    // Soft outer drop shadow on transparent canvas
+    // Outer shadow
     ctx.saveGState()
     ctx.setShadow(
-        offset: CGSize(width: 0, height: -20),
-        blur: 44,
-        color: NSColor(srgbRed: 0.12, green: 0.22, blue: 0.38, alpha: 0.20).cgColor
+        offset: CGSize(width: 0, height: -24),
+        blur: 48,
+        color: NSColor(srgbRed: 0.05, green: 0.05, blue: 0.20, alpha: 0.55).cgColor
     )
-    ctx.setFillColor(NSColor.white.cgColor)
+    ctx.setFillColor(NSColor.black.cgColor)
     ctx.addPath(bodyPath)
     ctx.fillPath()
     ctx.restoreGState()
 
-    // Light airy porcelain-to-sky gradient fill
     ctx.saveGState()
     ctx.addPath(bodyPath)
     ctx.clip()
 
+    // Deep indigo → midnight blue gradient background
     let bgColors = [
-        NSColor(srgbRed: 0.995, green: 0.998, blue: 1.0, alpha: 1.0).cgColor,
-        NSColor(srgbRed: 0.935, green: 0.965, blue: 1.0, alpha: 1.0).cgColor,
-        NSColor(srgbRed: 0.875, green: 0.932, blue: 0.995, alpha: 1.0).cgColor,
+        NSColor(srgbRed: 0.18, green: 0.14, blue: 0.48, alpha: 1.0).cgColor,  // indigo top
+        NSColor(srgbRed: 0.08, green: 0.10, blue: 0.32, alpha: 1.0).cgColor,  // mid
+        NSColor(srgbRed: 0.04, green: 0.06, blue: 0.22, alpha: 1.0).cgColor,  // deep navy bottom
     ]
-    if let bgGrad = CGGradient(colorsSpace: cs, colors: bgColors as CFArray, locations: [0.0, 0.58, 1.0]) {
+    if let grad = CGGradient(colorsSpace: cs, colors: bgColors as CFArray, locations: [0.0, 0.55, 1.0]) {
         ctx.drawLinearGradient(
-            bgGrad,
+            grad,
             start: CGPoint(x: 512, y: 924),
             end: CGPoint(x: 512, y: 100),
             options: []
         )
     }
 
-    // Subtle soft pastel ambient glow in top-left
-    if let glowGrad = CGGradient(
+    // Ambient glow: cool cyan top-left, warm magenta bottom-right
+    if let glow1 = CGGradient(
         colorsSpace: cs,
         colors: [
-            NSColor(srgbRed: 0.45, green: 0.76, blue: 1.0, alpha: 0.22).cgColor,
-            NSColor(srgbRed: 0.45, green: 0.76, blue: 1.0, alpha: 0.0).cgColor,
+            NSColor(srgbRed: 0.20, green: 0.75, blue: 1.0, alpha: 0.28).cgColor,
+            NSColor(srgbRed: 0.20, green: 0.75, blue: 1.0, alpha: 0.0).cgColor,
         ] as CFArray,
         locations: [0.0, 1.0]
     ) {
         ctx.drawRadialGradient(
-            glowGrad,
-            startCenter: CGPoint(x: 280, y: 760),
+            glow1,
+            startCenter: CGPoint(x: 260, y: 780),
             startRadius: 0,
-            endCenter: CGPoint(x: 280, y: 760),
-            endRadius: 440,
+            endCenter: CGPoint(x: 260, y: 780),
+            endRadius: 520,
+            options: [.drawsBeforeStartLocation]
+        )
+    }
+    if let glow2 = CGGradient(
+        colorsSpace: cs,
+        colors: [
+            NSColor(srgbRed: 0.95, green: 0.30, blue: 0.55, alpha: 0.20).cgColor,
+            NSColor(srgbRed: 0.95, green: 0.30, blue: 0.55, alpha: 0.0).cgColor,
+        ] as CFArray,
+        locations: [0.0, 1.0]
+    ) {
+        ctx.drawRadialGradient(
+            glow2,
+            startCenter: CGPoint(x: 780, y: 240),
+            startRadius: 0,
+            endCenter: CGPoint(x: 780, y: 240),
+            endRadius: 460,
             options: [.drawsBeforeStartLocation]
         )
     }
 
-    // Subtle dot grid inside the light icon surface (referencing pixel precision)
-    ctx.setFillColor(NSColor(srgbRed: 0.20, green: 0.45, blue: 0.78, alpha: 0.065).cgColor)
-    stride(from: 176, through: 848, by: 48).forEach { gx in
-        stride(from: 176, through: 848, by: 48).forEach { gy in
-            ctx.fillEllipse(in: CGRect(x: CGFloat(gx) - 2.5, y: CGFloat(gy) - 2.5, width: 5, height: 5))
+    // Faint pixel-grid dots (screenshot tool DNA)
+    ctx.setFillColor(NSColor(srgbRed: 0.45, green: 0.75, blue: 1.0, alpha: 0.10).cgColor)
+    stride(from: 180, through: 844, by: 52).forEach { gx in
+        stride(from: 180, through: 844, by: 52).forEach { gy in
+            ctx.fillEllipse(in: CGRect(x: CGFloat(gx) - 2.0, y: CGFloat(gy) - 2.0, width: 4, height: 4))
         }
     }
 
-    // Frosted white captured card inside the selection frame
-    let cropRect = CGRect(x: 244, y: 294, width: 496, height: 424)
-    let cropCardPath = CGPath(roundedRect: cropRect, cornerWidth: 16, cornerHeight: 16, transform: nil)
+    // Selection frame (square, centered slightly upper-left to leave room for arrow)
+    let selRect = CGRect(x: 250, y: 320, width: 460, height: 380)
+    let selPath = CGPath(roundedRect: selRect, cornerWidth: 18, cornerHeight: 18, transform: nil)
 
+    // Frame shadow (glow underneath)
     ctx.saveGState()
     ctx.setShadow(
-        offset: CGSize(width: 0, height: -14),
+        offset: CGSize(width: 0, height: -8),
         blur: 32,
-        color: NSColor(srgbRed: 0.08, green: 0.32, blue: 0.68, alpha: 0.14).cgColor
+        color: NSColor(srgbRed: 0.20, green: 0.85, blue: 1.0, alpha: 0.45).cgColor
     )
-    ctx.setFillColor(NSColor(srgbRed: 1.0, green: 1.0, blue: 1.0, alpha: 0.94).cgColor)
-    ctx.addPath(cropCardPath)
-    ctx.fillPath()
-    ctx.restoreGState()
-
-    // Soft pastel landscape/UI preview motif inside the captured card
-    ctx.saveGState()
-    ctx.addPath(cropCardPath)
-    ctx.clip()
-
-    if let cardGrad = CGGradient(
-        colorsSpace: cs,
-        colors: [
-            NSColor(srgbRed: 0.95, green: 0.98, blue: 1.0, alpha: 1.0).cgColor,
-            NSColor(srgbRed: 0.88, green: 0.94, blue: 1.0, alpha: 1.0).cgColor,
-        ] as CFArray,
-        locations: [0.0, 1.0]
-    ) {
-        ctx.drawLinearGradient(
-            cardGrad,
-            start: CGPoint(x: cropRect.midX, y: cropRect.maxY),
-            end: CGPoint(x: cropRect.midX, y: cropRect.minY),
-            options: []
-        )
-    }
-
-    // Soft abstract geometric highlight circle + wave inside captured card
-    ctx.setFillColor(NSColor(srgbRed: 1.0, green: 0.80, blue: 0.32, alpha: 0.55).cgColor)
-    ctx.fillEllipse(in: CGRect(x: 320, y: 545, width: 88, height: 88))
-
-    let hillPath = CGMutablePath()
-    hillPath.move(to: CGPoint(x: cropRect.minX, y: cropRect.minY))
-    hillPath.addLine(to: CGPoint(x: cropRect.minX, y: 390))
-    hillPath.addCurve(
-        to: CGPoint(x: cropRect.maxX, y: 430),
-        control1: CGPoint(x: 390, y: 470),
-        control2: CGPoint(x: 570, y: 340)
-    )
-    hillPath.addLine(to: CGPoint(x: cropRect.maxX, y: cropRect.minY))
-    hillPath.closeSubpath()
-    ctx.setFillColor(NSColor(srgbRed: 0.56, green: 0.80, blue: 0.99, alpha: 0.42).cgColor)
-    ctx.addPath(hillPath)
-    ctx.fillPath()
-    ctx.restoreGState()
-
-    // Crisp sky-azure selection border around cropRect
-    let accentBlue = NSColor(srgbRed: 0.08, green: 0.52, blue: 0.98, alpha: 1.0)
-    ctx.saveGState()
-    ctx.setStrokeColor(accentBlue.cgColor)
-    ctx.setLineWidth(14)
-    ctx.addPath(cropCardPath)
+    ctx.setStrokeColor(NSColor(srgbRed: 0.20, green: 0.90, blue: 1.0, alpha: 1.0).cgColor)
+    ctx.setLineWidth(16)
+    ctx.addPath(selPath)
     ctx.strokePath()
     ctx.restoreGState()
 
-    // Dashed extension crop guides at top-left & bottom-right (classic snipping crosshair feel)
-    ctx.saveGState()
-    ctx.setStrokeColor(accentBlue.withAlphaComponent(0.45).cgColor)
-    ctx.setLineWidth(8)
-    ctx.setLineCap(.round)
-    let guides: [(CGPoint, CGPoint)] = [
-        (CGPoint(x: cropRect.minX - 52, y: cropRect.maxY), CGPoint(x: cropRect.minX - 18, y: cropRect.maxY)),
-        (CGPoint(x: cropRect.minX, y: cropRect.maxY + 18), CGPoint(x: cropRect.minX, y: cropRect.maxY + 52)),
-        (CGPoint(x: cropRect.maxX + 18, y: cropRect.minY), CGPoint(x: cropRect.maxX + 52, y: cropRect.minY)),
-        (CGPoint(x: cropRect.maxX, y: cropRect.minY - 52), CGPoint(x: cropRect.maxX, y: cropRect.minY - 18)),
-    ]
-    for (a, b) in guides {
-        ctx.move(to: a)
-        ctx.addLine(to: b)
-    }
-    ctx.strokePath()
-    ctx.restoreGState()
-
-    // 4 crisp circular selection handles at corners of cropRect
+    // Corner handles (bright cyan circles with white core)
     let corners = [
-        CGPoint(x: cropRect.minX + 3, y: cropRect.minY + 3),
-        CGPoint(x: cropRect.maxX - 3, y: cropRect.minY + 3),
-        CGPoint(x: cropRect.maxX - 3, y: cropRect.maxY - 3),
-        CGPoint(x: cropRect.minX + 3, y: cropRect.maxY - 3),
+        CGPoint(x: selRect.minX + 4, y: selRect.minY + 4),
+        CGPoint(x: selRect.maxX - 4, y: selRect.minY + 4),
+        CGPoint(x: selRect.maxX - 4, y: selRect.maxY - 4),
+        CGPoint(x: selRect.minX + 4, y: selRect.maxY - 4),
     ]
     for pt in corners {
-        let hr = CGRect(x: pt.x - 19, y: pt.y - 19, width: 38, height: 38)
+        let outer = CGRect(x: pt.x - 24, y: pt.y - 24, width: 48, height: 48)
+        let inner = CGRect(x: pt.x - 13, y: pt.y - 13, width: 26, height: 26)
+
         ctx.saveGState()
         ctx.setShadow(
             offset: CGSize(width: 0, height: -4),
-            blur: 10,
-            color: NSColor(srgbRed: 0.05, green: 0.25, blue: 0.55, alpha: 0.22).cgColor
+            blur: 14,
+            color: NSColor(srgbRed: 0.20, green: 0.85, blue: 1.0, alpha: 0.65).cgColor
         )
-        ctx.setFillColor(NSColor.white.cgColor)
-        ctx.fillEllipse(in: hr)
+        ctx.setFillColor(NSColor(srgbRed: 0.20, green: 0.90, blue: 1.0, alpha: 1.0).cgColor)
+        ctx.fillEllipse(in: outer)
         ctx.restoreGState()
 
-        ctx.setStrokeColor(accentBlue.cgColor)
-        ctx.setLineWidth(9)
-        ctx.strokeEllipse(in: hr)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fillEllipse(in: inner)
     }
 
-    // Signature Snipaste-style warm coral annotation arrow sweeping across bottom edge cleanly left of the corner handle
-    drawSnipArrow(
-        in: ctx,
-        start: CGPoint(x: 696, y: 196),
-        end: CGPoint(x: 486, y: 506),
-        headLength: 134,
-        headWidth: 114,
-        neckWidth: 38,
-        tailWidth: 16,
-        gradientColors: [
-            NSColor(srgbRed: 1.0, green: 0.46, blue: 0.24, alpha: 1.0).cgColor,
-            NSColor(srgbRed: 1.0, green: 0.24, blue: 0.34, alpha: 1.0).cgColor,
-        ]
-    )
+    // Annotation arrow (warm coral→magenta, sweeping from bottom-right into frame)
+    let arrowStart = CGPoint(x: 780, y: 220)
+    let arrowEnd = CGPoint(x: 520, y: 540)
+    let dx = arrowEnd.x - arrowStart.x
+    let dy = arrowEnd.y - arrowStart.y
+    let angle = atan2(dy, dx)
+    let cosA = cos(angle)
+    let sinA = sin(angle)
+    let perpX = -sinA
+    let perpY = cosA
 
-    // Subtle pearlescent inner border along the squircle edge
+    let headLen: CGFloat = 156
+    let headW: CGFloat = 128
+    let neckW: CGFloat = 42
+    let tailW: CGFloat = 18
+
+    let neckCenter = CGPoint(x: arrowEnd.x - cosA * headLen * 0.74, y: arrowEnd.y - sinA * headLen * 0.74)
+    let barbBase = CGPoint(x: arrowEnd.x - cosA * headLen, y: arrowEnd.y - sinA * headLen)
+
+    let tailL = CGPoint(x: arrowStart.x + perpX * tailW * 0.5, y: arrowStart.y + perpY * tailW * 0.5)
+    let tailR = CGPoint(x: arrowStart.x - perpX * tailW * 0.5, y: arrowStart.y - perpY * tailW * 0.5)
+    let neckL = CGPoint(x: neckCenter.x + perpX * neckW * 0.5, y: neckCenter.y + perpY * neckW * 0.5)
+    let neckR = CGPoint(x: neckCenter.x - perpX * neckW * 0.5, y: neckCenter.y - perpY * neckW * 0.5)
+    let barbL = CGPoint(x: barbBase.x + perpX * headW * 0.5, y: barbBase.y + perpY * headW * 0.5)
+    let barbR = CGPoint(x: barbBase.x - perpX * headW * 0.5, y: barbBase.y - perpY * headW * 0.5)
+    let tailCap = CGPoint(x: arrowStart.x - cosA * tailW * 0.6, y: arrowStart.y - sinA * tailW * 0.6)
+
+    let arrowPath = CGMutablePath()
+    arrowPath.move(to: arrowEnd)
+    arrowPath.addLine(to: barbL)
+    arrowPath.addLine(to: neckL)
+    arrowPath.addLine(to: tailL)
+    arrowPath.addQuadCurve(to: tailR, control: tailCap)
+    arrowPath.addLine(to: neckR)
+    arrowPath.addLine(to: barbR)
+    arrowPath.closeSubpath()
+
+    // Arrow glow
     ctx.saveGState()
-    ctx.setStrokeColor(NSColor.white.withAlphaComponent(0.85).cgColor)
-    ctx.setLineWidth(6)
-    ctx.addPath(createContinuousSquirclePath(in: bodyRect.insetBy(dx: 3, dy: 3), radius: 182))
-    ctx.strokePath()
+    ctx.setShadow(
+        offset: CGSize(width: 0, height: -10),
+        blur: 30,
+        color: NSColor(srgbRed: 1.0, green: 0.35, blue: 0.45, alpha: 0.55).cgColor
+    )
+    ctx.setFillColor(NSColor(srgbRed: 1.0, green: 0.42, blue: 0.42, alpha: 1.0).cgColor)
+    ctx.addPath(arrowPath)
+    ctx.fillPath()
+    ctx.restoreGState()
 
-    ctx.setStrokeColor(NSColor(srgbRed: 0.62, green: 0.76, blue: 0.94, alpha: 0.45).cgColor)
-    ctx.setLineWidth(2.5)
-    ctx.addPath(createContinuousSquirclePath(in: bodyRect.insetBy(dx: 1, dy: 1), radius: 184))
+    // Arrow gradient fill
+    ctx.saveGState()
+    ctx.addPath(arrowPath)
+    ctx.clip()
+    let arrowColors = [
+        NSColor(srgbRed: 1.0, green: 0.50, blue: 0.32, alpha: 1.0).cgColor,  // warm coral at tail
+        NSColor(srgbRed: 1.0, green: 0.24, blue: 0.50, alpha: 1.0).cgColor,  // hot magenta at head
+    ]
+    if let arrowGrad = CGGradient(colorsSpace: cs, colors: arrowColors as CFArray, locations: [0.0, 1.0]) {
+        ctx.drawLinearGradient(
+            arrowGrad,
+            start: arrowStart,
+            end: arrowEnd,
+            options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
+        )
+    }
+    ctx.restoreGState()
+
+    // Subtle inner highlight along squircle top edge
+    ctx.saveGState()
+    ctx.setStrokeColor(NSColor(srgbRed: 0.65, green: 0.85, blue: 1.0, alpha: 0.35).cgColor)
+    ctx.setLineWidth(3)
+    ctx.addPath(CGPath(roundedRect: bodyRect.insetBy(dx: 2, dy: 2), cornerWidth: 183, cornerHeight: 183, transform: nil))
     ctx.strokePath()
     ctx.restoreGState()
 

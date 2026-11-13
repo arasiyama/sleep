@@ -32,7 +32,8 @@ make test
 # Generate app icon and bundle build/QSnip.app (stamps version from Sources/Version.swift)
 make app
 
-# Build and zip a distributable archive build/QSnip-<version>-macos.zip
+# Build and zip a distributable dmg installer build/QSnip-<version>-macos.dmg
+# (requires create-dmg from Homebrew: brew install create-dmg)
 make dist
 ```
 
@@ -43,7 +44,7 @@ make dist
 GitHub Actions:
 
 - **CI** (`.github/workflows/ci.yml`) builds and tests every push/PR.
-- **Release** (`.github/workflows/release.yml`) is triggered manually from the Actions tab — enter a semver (e.g. `1.1.0`), and it stamps the version, builds, packages `QSnip-<version>-macos.zip`, tags `v<version>`, and publishes a GitHub Release.
+- **Release** (`.github/workflows/release.yml`) is triggered manually from the Actions tab — enter a semver (e.g. `1.1.0`), and it stamps the version, builds, packages `QSnip-<version>-macos.dmg`, tags `v<version>`, and publishes a GitHub Release.
 
 ## CLI Usage
 

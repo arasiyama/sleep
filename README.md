@@ -15,6 +15,8 @@ A lightweight, native macOS Snipaste-style screenshot, annotation, and pixel col
 - **Dual Execution Modes**:
   - **One-Shot CLI Mode** (ideal for Raycast, Alfred, Hammerspoon, skhd, or shell scripts)
   - **Menu Bar Mode** (`qsnip --menubar` or launch `QSnip.app` directly, with global hotkey **`⌃⌘A`**)
+- **Launch at Login**: Toggle from the menu bar; backed by `SMAppService` (macOS 13+).
+- **Permission Guidance**: Detects Screen Recording permission, shows a first-launch onboarding prompt, and surfaces the status in the menu bar with one-click access to System Settings.
 
 ## Build & Package
 
@@ -27,9 +29,21 @@ make build
 # Run unit tests
 make test
 
-# Generate app icon and bundle build/QSnip.app
+# Generate app icon and bundle build/QSnip.app (stamps version from Sources/Version.swift)
 make app
+
+# Build and zip a distributable archive build/QSnip-<version>-macos.zip
+make dist
 ```
+
+## Versioning & Releases
+
+`Sources/Version.swift` is the single source of truth for the version string. `make app` runs `scripts/sync-version.swift` to stamp it into `Resources/Info.plist`.
+
+GitHub Actions:
+
+- **CI** (`.github/workflows/ci.yml`) builds and tests every push/PR.
+- **Release** (`.github/workflows/release.yml`) is triggered manually from the Actions tab — enter a semver (e.g. `1.1.0`), and it stamps the version, builds, packages `QSnip-<version>-macos.zip`, tags `v<version>`, and publishes a GitHub Release.
 
 ## CLI Usage
 

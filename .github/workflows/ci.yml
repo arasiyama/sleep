@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test --disable-xctest
+
+      - name: Verify version stamping
+        run: |
+          TMP=$(mktemp -d)/Info.plist
+          cp Resources/Info.plist "$TMP"
+          swift scripts/sync-version.swift "$TMP"
+          ! grep -q "__QSNIP_VERSION__" "$TMP"
+          git diff --exit-code Resources/Info.plist Sources/Version.swift

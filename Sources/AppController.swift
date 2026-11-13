@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ServiceManagement
 import UniformTypeIdentifiers
 
 enum CaptureSource {
@@ -29,6 +30,10 @@ final class AppController: NSObject, NSApplicationDelegate {
     private let hotKeyManager = HotKeyManager()
     private var initialCaptureResult: CaptureResult?
 
+    private var launchAtLoginItem: NSMenuItem?
+    private var screenAccessItem: NSMenuItem?
+    private var permissionObserver: NSObjectProtocol?
+
     init(options: LaunchOptions, initialCaptureResult: CaptureResult? = nil) {
         self.options = options
         self.initialCaptureResult = initialCaptureResult
@@ -50,9 +55,48 @@ final class AppController: NSObject, NSApplicationDelegate {
             hotKeyManager.register { [weak self] in
                 self?.triggerMenuCapture(forceInteractive: false)
             }
+            observePermissionChanges()
+            PermissionManager.showOnboardingIfNeeded(hotkey: "⌃⌘A")
 
         case .help, .version:
             NSApp.terminate(nil)
+        }
+    }
+
+    /// Re-check Screen Recording status whenever the app becomes active again,
+    /// e.g. right after the user flips the switch in System Settings.
+    private func observePermissionChanges() {
+        permissionObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshMenuState()
+        }
+    }
+
+    private func refreshMenuState() {
+        if let item = launchAtLoginItem {
+            switch SMAppService.mainApp.status {
+            case .enabled:
+                item.state = .on
+                item.title = "Launch at Login"
+            case .requiresApproval:
+                item.state = .off
+                item.title = "Launch at Login (approve in System Settings)"
+            default:
+                item.state = .off
+                item.title = "Launch at Login"
+            }
+        }
+        if let item = screenAccessItem {
+            if PermissionManager.isGranted {
+                item.state = .on
+                item.title = "Screen Recording Access"
+            } else {
+                item.state = .off
+                item.title = "Screen Recording Access (not granted)"
+            }
         }
     }
 
@@ -119,6 +163,34 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        let launchItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(onToggleLaunchAtLogin),
+            keyEquivalent: ""
+        )
+        launchItem.target = self
+        menu.addItem(launchItem)
+        self.launchAtLoginItem = launchItem
+
+        let accessItem = NSMenuItem(
+            title: "Screen Recording Access",
+            action: #selector(onRequestScreenAccess),
+            keyEquivalent: ""
+        )
+        accessItem.target = self
+        menu.addItem(accessItem)
+        self.screenAccessItem = accessItem
+
+        menu.addItem(.separator())
+
+        let versionItem = NSMenuItem(
+            title: "QSnip v\(Version.current)",
+            action: nil,
+            keyEquivalent: ""
+        )
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
+
         let quitItem = NSMenuItem(
             title: "Quit QSnip",
             action: #selector(onMenuQuit),
@@ -129,6 +201,29 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         item.menu = menu
         self.statusItem = item
+        refreshMenuState()
+    }
+
+    @objc private func onToggleLaunchAtLogin() {
+        let enabling = !LaunchAtLogin.isEnabled
+        if let error = LaunchAtLogin.setEnabled(enabling) {
+            NSSound.beep()
+            let alert = NSAlert()
+            alert.messageText = "Launch at Login"
+            alert.informativeText = error
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+        if LaunchAtLogin.needsApproval {
+            LaunchAtLogin.openSystemSettings()
+        }
+        refreshMenuState()
+    }
+
+    @objc private func onRequestScreenAccess() {
+        guard !PermissionManager.isGranted else { return }
+        PermissionManager.request()
+        PermissionManager.openSystemSettings()
     }
 
     @objc private func onMenuSnip() {

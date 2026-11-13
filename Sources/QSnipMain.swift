@@ -3,7 +3,7 @@ import Foundation
 
 @main
 enum QSnipMain {
-    static let version = "1.0.0"
+    static let version = Version.current
 
     static func parseArguments(_ args: [String], isAppBundle: Bool = false) throws -> LaunchOptions {
         var opts = LaunchOptions()
